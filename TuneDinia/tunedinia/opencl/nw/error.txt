@@ -1,0 +1,2 @@
+alias gpurun="srun -N 1 -C TitanX --gres=gpu:1"
+gpurun --pty bash

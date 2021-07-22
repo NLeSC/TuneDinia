@@ -1,0 +1,4 @@
+#!/bin/bash
+RODINIA_BASE_DIR=$(pwd)/../..
+export DATA_DIR=$RODINIA_BASE_DIR/data
+./bfs.out ${DATA_DIR}/bfs/graph1MW_6.txt $@

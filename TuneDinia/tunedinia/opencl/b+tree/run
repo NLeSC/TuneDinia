@@ -1,0 +1,4 @@
+#!/bin/bash
+RODINIA_CURRENT_DIR=$(pwd)/../..
+export DATA_DIR=$RODINIA_CURRENT_DIR/data
+./b+tree.out file ${DATA_DIR}/b+tree/mil.txt command ${DATA_DIR}/b+tree/command.txt $@

@@ -1,0 +1,4 @@
+#!/bin/bash
+RODINIA_BASE_DIR=$(pwd)/../..
+export DATA_DIR=$RODINIA_BASE_DIR/data
+./myocyte.out -time 500 -r $RODINIA_BASE_DIR/myocyte

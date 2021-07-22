@@ -1,0 +1,4 @@
+#!/bin/bash
+RODINIA_BASE_DIR=$(pwd)/../..
+export DATA_DIR=$RODINIA_BASE_DIR/data
+./nn.out filelist.txt -r 50 -lat 30 -lng 90 -t -f ${DATA_DIR} $@
