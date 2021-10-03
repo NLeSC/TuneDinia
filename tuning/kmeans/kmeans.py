@@ -4,7 +4,7 @@ import os
 from kernel_tuner import tune_kernel,run_kernel
 from collections import OrderedDict
 from kernel_tuner.integration import store_results, create_device_targets
-from kmeans_debug import run
+# from kmeans_debug import run
 
 cp = ["-I" + os.path.dirname(os.path.realpath(__file__))]
 
@@ -42,17 +42,17 @@ def tune(args):
   block_deltas = np.zeros(block_deltas_size,np.int32)
   block_clusters = np.zeros(block_clusters_size,np.float32)
   kmeanspoint_args = [invert_mapping_output[1],args[1],args[2],args[3],args[4],args[5],block_deltas,block_clusters,args[0]]  #run the debug script to verify the corectness of the implementation
-  debug_answer = run(args)
-  answer = [None,None,None,None,debug_answer[4],None,None,debug_answer[7],None]
+  # debug_answer = run(args)
+  # answer = [None,None,None,None,debug_answer[4],None,None,debug_answer[7],None]
   kmeanspoint_size = (np.int32(args[1]*args[3]))
   kmeanspoint_params_tuning = OrderedDict()
-  kmeanspoint_params_tuning["block_size_x"] = [2**i for i in range(7,11)]
+  kmeanspoint_params_tuning["block_size_x"] = [2**i for i in range(6,11)]
   kmeanspoint_params_tuning["block_size_y"] = [1] 
   kmeanspoint_metrics = OrderedDict()
   kmeanspoint_metrics["GFLOP/s"] = lambda x: (kmeanspoint_size/1e9)/(x['time']/1e3)
   #tune the second kernel and verify correctness
   print("-------- TUNING KMEANS POINT KERNEL ------------")
-  kmeans_tune, env = tune_kernel("kmeansPoint","kmeanspoint.cu",kmeanspoint_size,kmeanspoint_args,kmeanspoint_params_tuning,metrics=kmeanspoint_metrics,compiler=cp,answer=answer)
+  kmeans_tune, env = tune_kernel("kmeansPoint","kmeanspoint.cu",kmeanspoint_size,kmeanspoint_args,kmeanspoint_params_tuning,metrics=kmeanspoint_metrics,compiler=cp)
   print("-------------------------------------------------")
 
 if __name__ == "__main__":

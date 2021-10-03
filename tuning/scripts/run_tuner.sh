@@ -24,7 +24,7 @@ exe() { echo "++ $@" |& tee -a $OUTDIR/$b.txt ; \
 for b in $bm; do
     echo "$(date) # running $b"
     cd $b
-    srun --gres=gpu:1 python $b.py
+    ./$b
 
     cd $OCLDIR
 

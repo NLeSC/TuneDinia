@@ -31,13 +31,13 @@ def parse_args():
     pyramid_height  = np.int32(sys.argv[2])
     total_iterations = np.int32(sys.argv[3])
     #store the temperatures from the file
-    with open('temp_1024') as f:
+    with open(sys.argv[4]) as f:
         all_file_list = f.read().strip().split('\n')  # make a list of lines
         temp_data_list = [[float(each_int) for each_int in line.split()] for line in all_file_list]  
         temp_data_src = np.array(temp_data_list,dtype=np.float32)
         temp_data_dst = deepcopy(temp_data_src)
     #store the power measurements from the file
-    with open('power_1024') as f:
+    with open(sys.argv[5]) as f:
         all_file_list = f.read().strip().split('\n')  # make a list of lines
         power_data_list = [[float(each_int) for each_int in line.split()] for line in all_file_list] 
         power_data =  np.array(power_data_list).astype(np.float32)
@@ -67,13 +67,14 @@ def parse_args():
 def tune(args,problem_size):
     metrics = OrderedDict()
     metrics["GFLOP/s"] = lambda x: (problem_size/1e9)/(x['time']/1e3)
-    tune_params_ref = dict()
-    tune_params_ref["block_size_x"] = [16]
-    tune_params_ref["block_size_y"] = [16]
+    # tune_params_ref = dict()
+    # tune_params_ref["block_size_x"] = [16]
+    # tune_params_ref["block_size_y"] = [16]
     tune_params = dict()
     tune_params["block_size_x"] = [16*i for i in range(1,4)]
     tune_params["block_size_y"] = [16*i for i in range(1,4)]
-    hotspot_ref_output, env = tune_kernel("calculate_temp","hotspot_original_kernel.cu",problem_size,args,tune_params_ref,compiler_options=cp,metrics=metrics, verbose=True)
+    tune_params["tile_size_y"] = [2]
+    #hotspot_ref_output, env = tune_kernel("calculate_temp","hotspot_original_kernel.cu",problem_size,args,tune_params_ref,compiler_options=cp,metrics=metrics, verbose=True)
     hotspot_output, env = tune_kernel("calculate_temp","hotspot_kernel.cu",problem_size,args,tune_params,compiler_options=cp,metrics=metrics, verbose=True)
 
 
