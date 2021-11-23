@@ -1,0 +1,2 @@
+srun --gres=gpu:1 python ./gaussian_tune.py matrix1024.txt OPTIMIZED
+

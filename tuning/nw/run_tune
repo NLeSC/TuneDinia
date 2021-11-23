@@ -1,0 +1,2 @@
+srun --gres=gpu:1 python ./needle_tune.py
+

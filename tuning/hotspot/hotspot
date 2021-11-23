@@ -1,1 +1,0 @@
-srun --gres=gpu:1 python hotspot.py 64 2 2 temp_64 power_64 output.out output_ref.out

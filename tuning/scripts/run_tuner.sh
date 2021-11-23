@@ -10,7 +10,7 @@ bm="backprop b+tree dwt2d heartwall hotspot3D kmeans hybridsort \
     nw pathfinder streamcluster bfs cfd gaussian hotspot \
     lavaMD lud nn particlefilter srad"
 
-bm="backprop bfs gaussian hotspot kmeans"
+bm="backprop bfs kmeans nw gaussian streamcluster hotspot"
 
 OUTDIR=$DIR/results-gpu
 mkdir $OUTDIR &>/dev/null
@@ -24,7 +24,7 @@ exe() { echo "++ $@" |& tee -a $OUTDIR/$b.txt ; \
 for b in $bm; do
     echo "$(date) # running $b"
     cd $b
-    ./$b
+    ./run_tune
 
     cd $OCLDIR
 

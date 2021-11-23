@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include "math.h"
 #include "cuda.h"
-#include "backprop.h"
-#include "bpnn_layerforward_CUDA.h"
 #define stop_loop 0
+#define WIDTH 16  // shared memory width  
+#define HEIGHT 16 // shared memory height
+#define HIDDEN 16
+
 
 __global__ void
-bpnn_layerforward_CUDA_test(float *input_cuda,
+bpnn_layerforward(float *input_cuda,
              float *input_hidden_cuda,
              float *hidden_partial_sum,
              int in,
@@ -28,13 +30,13 @@ bpnn_layerforward_CUDA_test(float *input_cuda,
        input_node[ty] = input_cuda[index_in];
     }
 
-
-
     weight_matrix[ty][tx] = input_hidden_cuda[index];
     __syncthreads();
- //for-loop much in same way as the for-loop on the bottom
-    weight_matrix[ty][tx] = weight_matrix[ty][tx] * input_node[ty];
-//end of for-loop
+    
+   for (int i=tx; i<HIDDEN; i+=block_size_x) { // condition i < HIDDEN
+      weight_matrix[ty][tx] = weight_matrix[ty][tx] * input_node[ty];
+   }
+
 
     __syncthreads();
 

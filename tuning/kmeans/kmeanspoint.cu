@@ -1,9 +1,26 @@
 #ifndef _KMEANS_CUDA_KERNEL_H_
 #define _KMEANS_CUDA_KERNEL_H_
 
+#define USE_READ_ONLY_CACHE read_only
+#if USE_READ_ONLY_CACHE == 1
+#define LDG(x, y) __ldg(x+y)
+#elif USE_READ_ONLY_CACHE == 0
+#define LDG(x, y) x[y]
+#endif
+
+#ifndef NFEATURES
+#define NFEATURES 35
+#endif
+
 #define GPU_DELTA_REDUCTION
 #define GPU_NEW_CENTER_REDUCTION
+#define THREADS_PER_BLOCK block_size_x*block_size_y
 
+#ifdef USE_CUB
+#include <cub/cub.cuh>
+#endif
+
+extern "C"
 __global__ void
 kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
             int     nfeatures,
@@ -18,26 +35,27 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 	// block ID
 	const unsigned int block_id = gridDim.x*blockIdx.y+blockIdx.x;
 	// point/thread ID  
-	const unsigned int point_id = block_id*block_size_x*block_size_y + threadIdx.x;
-
+	const unsigned int point_offset = block_id*block_size_x*block_size_y;
+	const unsigned int point_id = point_offset + threadIdx.x;
 	int  index = -1;
 
 	if (point_id < npoints)
 	{
 		int i, j;
-		float min_dist =  1E+37;
+		float min_dist = 1e10;
 		float dist;													/* distance square between a point to cluster center */
 		
 		/* find the cluster center id with min distance to pt */
-		for (i=0; i<nclusters; i++) {
+		#pragma unroll
+		for (i=0; i<NCLUSTERS; i++) {
 			int cluster_base_index = i*nfeatures;					/* base index of cluster centers for inverted array */			
 			float ans=0.0;												/* Euclidean distance sqaure */
-
-			for (j=0; j < nfeatures; j++)
+			#pragma unroll
+			for (j=0; j < NFEATURES; j++)
 			{					
 				int addr = point_id + j*npoints;					/* appropriate index of data point */
-				float diff = (features[addr] -  //t_features[addr]
-							  clusters[cluster_base_index + j]);	/* distance between a data point to cluster centers */
+				float diff = LDG(features,addr) -  //t_features[addr]
+							  clusters[cluster_base_index + j];	/* distance between a data point to cluster centers */
 				ans += diff*diff;									/* sum of squares */
 			}
 			dist = ans;		
@@ -50,10 +68,12 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 			}
 		}
 	}
-	#ifdef GPU_DELTA_REDUCTION
+	
+
+#ifdef GPU_DELTA_REDUCTION
     // count how many points are now closer to a different cluster center	
-	__shared__ int deltas[block_size_x*block_size_y];
-	if(threadIdx.x < block_size_x*block_size_y) {
+	__shared__ int deltas[THREADS_PER_BLOCK];
+	if(threadIdx.x < THREADS_PER_BLOCK) {
 		deltas[threadIdx.x] = 0;
 	}
 #endif
@@ -68,65 +88,58 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 		/* assign the membership to object point_id */
 		membership[point_id] = index;
 	}
-
-#ifdef GPU_DELTA_REDUCTION
 	// make sure all the deltas have finished writing to shared memory
 	__syncthreads();
-
-	// now let's count them
+#ifdef GPU_DELTA_REDUCTION
+	#ifdef USE_CUB
+	typedef cub::BlockReduce<int, THREADS_PER_BLOCK> BlockReduce;
+	__shared__ typename BlockReduce::TempStorage smem_storage;
+	int data = deltas[threadIdx.x];;
+	int aggregate = BlockReduce(smem_storage).Sum(data);
+	// propagate number of changes to global counter
+	if(threadIdx.x == 0) {
+		block_deltas[blockIdx.y * gridDim.x + blockIdx.x] = aggregate;
+	}
 	// primitve reduction follows
-	unsigned int threadids_participating = (block_size_x*block_size_y) / 2;
-	for(;threadids_participating > 1; threadids_participating /= 2) {
+	#else
+	unsigned int threadids_participating = THREADS_PER_BLOCK / 2;
+	for(;threadids_participating > 0; threadids_participating /= 2) {
    		if(threadIdx.x < threadids_participating) {
 			deltas[threadIdx.x] += deltas[threadIdx.x + threadids_participating];
 		}
    		__syncthreads();
 	}
-	if(threadIdx.x < 1)	{deltas[threadIdx.x] += deltas[threadIdx.x + 1];}
-	__syncthreads();
-		// propagate number of changes to global counter
+	// propagate number of changes to global counter
 	if(threadIdx.x == 0) {
 		block_deltas[blockIdx.y * gridDim.x + blockIdx.x] = deltas[0];
-		//printf("original id: %d, modified: %d\n", blockIdx.y*gridDim.x+blockIdx.x, blockIdx.x);
-		
 	}
+	#endif
 
 #endif
 
 
 #ifdef GPU_NEW_CENTER_REDUCTION
-	int center_id = threadIdx.x / nfeatures;    
-	int dim_id = threadIdx.x - nfeatures*center_id;
-
-	__shared__ int new_center_ids[block_size_x*block_size_y];
-
+	
+	__shared__ int new_center_ids[THREADS_PER_BLOCK];
 	new_center_ids[threadIdx.x] = index;
 	__syncthreads();
 
-	/***
-	determine which dimension calculte the sum for
-	mapping of threads is
-	center0[dim0,dim1,dim2,...]center1[dim0,dim1,dim2,...]...
-	***/ 	
-
-	int new_base_index = (point_id - threadIdx.x)*nfeatures + dim_id;
 	float accumulator = 0.f;
-
-	if(threadIdx.x < nfeatures * nclusters) {
+	#pragma unroll
+	for(int j = threadIdx.x; j < (NFEATURES*NCLUSTERS); j += THREADS_PER_BLOCK){
+		accumulator = 0.f;
+		int cluster = j / nfeatures;    //0..clusters-1
+		int feature = j % nfeatures;	//0..nfeatures
+		int new_base_index = point_offset*nfeatures + feature;
 		// accumulate over all the elements of this threadblock 
-		for(int i = 0; i< (block_size_x*block_size_y); i++) {
-			float val = feature_flipped_d[new_base_index+i*nfeatures];
-			if(new_center_ids[i] == center_id) 
-				accumulator += val;
+		#pragma unroll
+		for(int i = 0; i < THREADS_PER_BLOCK; i++) {
+			if(new_center_ids[i] == cluster) 
+				accumulator += feature_flipped_d[new_base_index+i*nfeatures];
 		}
-	
-		// now store the sum for this threadblock
-		/***
-		mapping to global array is
-		block0[center0[dim0,dim1,dim2,...]center1[dim0,dim1,dim2,...]...]block1[...]...
-		***/
-		block_clusters[(blockIdx.y*gridDim.x + blockIdx.x) * nclusters * nfeatures + threadIdx.x] = accumulator;
+		block_clusters[(blockIdx.y*gridDim.x + blockIdx.x) * nclusters * nfeatures + j] = accumulator;
 	}
 #endif
+
 }
 #endif // #ifndef _KMEANS_CUDA_KERNEL_H_
