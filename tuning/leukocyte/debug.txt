@@ -1,0 +1,9 @@
+kernel.cu(55): error: identifier "inner_loop" is undefined
+
+kernel.cu(55): warning: the optional argument to the unroll pragma must be an integral constant expression, ignoring pragma for this loop
+
+1 error detected in the compilation of "kernel.cu".
+---------------------------------------------------------------------
+
+ValueError: not enough values to unpack (expected 2, got 1)
+
