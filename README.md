@@ -15,6 +15,8 @@ The existing version includes the following test cases :
 	 Streamcluster
 	 Kmeans
 	 Needleman Wunsch
+	 Gaussian
+	 SRAD
 
 ## Tuning
 
