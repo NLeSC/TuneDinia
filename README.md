@@ -28,8 +28,7 @@ In order to tune the kernels do the following :
  The run_tuner.sh script will create for each test case :     
  	1) A header file with device targets for compiling a kernel with different parameters on different devices (see https://benvanwerkhoven.github.io/kernel_tuner/user-api.html#kernel_tuner.create_device_targets)  
 	2) A .json file that stores the top (3% by default) best kernel configurations (see https://benvanwerkhoven.github.io/kernel_tuner/user-api.html#kernel_tuner.store_results)  
-	
-Note : the scripts are set to run on the DAS-5 supercomputer ( https://www.cs.vu.nl/das5/ ). Minor modifications need to be applied when these tests need to run on a different setup.
+
 
 ## End Goal
 
