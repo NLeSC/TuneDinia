@@ -1,3 +1,15 @@
+#ifndef kernel_tuner
+  #define grid_width 4096
+  #define grid_height 4096
+#endif
+
+#define tile_width block_size_x*tile_size_x + 2
+#define tile_height block_size_y*tile_size_y + 2
+
+#define lambda 3.14
+#define width (grid_width + 2)
+#define height (grid_height + 2)
+
 __global__ void
 srad_cuda_2(
 		  float *E_C, 
@@ -5,67 +17,62 @@ srad_cuda_2(
 		  float *N_C, 
 		  float *S_C,	
 		  float * J_cuda, 
-		  float * C_cuda, 
-		  int cols, 
-		  int rows, 
-		  float lambda,
+		  float * C_cuda,
 		  float q0sqr
 ) 
 {
-	  //block id
-	  int bx = blockIdx.x;
-    int by = blockIdx.y;
-
 	  //thread id
     int tx = threadIdx.x;
     int ty = threadIdx.y;
-
-	  //indices
-    int index   = cols * block_size_y * by * tile_size_y + block_size_x * bx * tile_size_x + cols * ty + tx;
-	int index_s = cols * block_size_y * by * tile_size_y + block_size_x * bx * tile_size_x  + cols * block_size_y + tx;
-    int index_e = cols * block_size_y * by * tile_size_y + block_size_x * bx * tile_size_x  + cols * ty + block_size_x;
-	
-    float cc[tile_size_y][tile_size_x];
-    float cn[tile_size_y][tile_size_x];
-    float cs[tile_size_y][tile_size_x];
-    float ce[tile_size_y][tile_size_x];
-    float cw[tile_size_y][tile_size_x];
-    float d_sum[tile_size_y][tile_size_x];
+    
+    int offset = 1;
+	  float cc, cn, cs, ce, cw, d_sum;
 
 	  //shared memory allocation
-	__shared__ float south_c[block_size_y * tile_size_y][block_size_x * tile_size_x];
-    __shared__ float east_c[block_size_y * tile_size_y][block_size_x * tile_size_x];
-    __shared__ float c_cuda_temp[block_size_y * tile_size_y][block_size_x * tile_size_x];
-    __shared__ float temp[block_size_y * tile_size_y][block_size_x * tile_size_x];
+    __shared__ float c_cuda_temp[tile_height][tile_width];
+    __shared__ float temp[tile_height][tile_width];
 
     //load data to shared memory
     #pragma unroll
-    for(int j = 0; j < tile_size_y; j++){
-        #pragma unroll
-        for(int i = 0; i < tile_size_x; i++){
-            temp[ty + j * block_size_y][tx + i * block_size_x] = J_cuda[index  + (j * block_size_y * cols) + (i * block_size_x)]; 
-            south_c[ty + j * block_size_y][tx + i * block_size_x] = ( by == gridDim.y - 1) ? C_cuda[cols * block_size_y * ((gridDim.y * tile_size_y) - 1)  + block_size_x * bx * tile_size_x + cols * ( block_size_y - 1 ) + tx + i * block_size_x] : C_cuda[index_s + (i * block_size_x)  + (j * block_size_y * cols)];
-            east_c[ty + j * block_size_y][tx + i * block_size_x] = (bx == gridDim.x - 1 ) ? C_cuda[cols * block_size_y * by * tile_size_y + block_size_x * ((gridDim.x * tile_size_x) - 1) + cols * ty + block_size_x-1 + (j * block_size_y * cols)] : C_cuda[index_e + (i * block_size_x) + (j * block_size_y * cols)];
-            c_cuda_temp[ty + j * block_size_y][tx + i * block_size_x] = C_cuda[index + (j * block_size_y * cols) + (i * block_size_x)];
+    for (int j = ty; j < tile_height; j += block_size_y) {
+      #pragma unroll
+      for (int i = tx; i < tile_width; i += block_size_x) {
+        int x = tile_size_x * block_size_x * blockIdx.x + i;
+        int y = tile_size_y * block_size_y * blockIdx.y + j;
+        if (x < width && y < height) {
+            temp[j][i] = J_cuda[y * width + x];
+            c_cuda_temp[j][i] = C_cuda[y * width + x];
+        } else {
+            temp[j][i] = 0.0;
+            c_cuda_temp[j][i] = 0.0;
         }
-    }    
-        
+      }
+    }
 
     __syncthreads();
+
     #pragma unroll
-    for(int j = 0; j < tile_size_y; j++){
-        #pragma unroll
-        for(int i = 0; i < tile_size_x; i++){
-            cc[j][i] = c_cuda_temp[ty + j * block_size_y][tx + i * block_size_x];
-            cn[j][i]  = cc[j][i];
-            cs[j][i] = ((ty + j * block_size_y) == ((block_size_y * tile_size_y) - 1)) ? south_c[ty + j * block_size_y][tx + i * block_size_x] : c_cuda_temp[ty+1  + j * block_size_y][tx + i * block_size_x];
-            cw[j][i] = cc[j][i];
-            ce[j][i] = ((tx + i * block_size_x) == (block_size_x * tile_size_x - 1)) ? east_c[ty + j * block_size_y][tx + i * block_size_x] : c_cuda_temp[ty + j * block_size_y][tx+1 + i * block_size_x];
-            // // divergence 
-            d_sum[j][i] = cn[j][i] * N_C[index + j * block_size_y * cols + i * block_size_x] + cs[j][i] * S_C[index + j * block_size_y * cols + i * block_size_x] + cw[j][i] * W_C[index + j * block_size_y * cols + i * block_size_x] + ce[j][i] * E_C[index + j * block_size_y * cols + i * block_size_x];
-            // // image update 
-            J_cuda[index + j * block_size_y * cols + i * block_size_x] = temp[ty + j * block_size_y][tx + i * block_size_x] + 0.25 * lambda * d_sum[j][i];
-        }
-    }
+    for (int j = ty + offset; j < tile_height - offset; j += block_size_y) {
+      int S = j + 1;
+
+      #pragma unroll
+      for (int i = tx + offset; i < tile_width - offset; i += block_size_x) {
+
+        int x = tile_size_x * block_size_x * blockIdx.x + i;
+        int y = tile_size_y * block_size_y * blockIdx.y + j;
+        if (x > grid_width || y > grid_height) { continue; }
         
+        int E = i + 1;
+        cc = c_cuda_temp[j][i];
+        cw = cc;
+        cn = cc;
+        cs = c_cuda_temp[S][i];
+        ce = c_cuda_temp[j][E];
+       // divergence 
+        d_sum = cn * N_C[y * width + x] + cs * S_C[y * width + x] + cw * W_C[y * width + x] + ce * E_C[y * width + x];
+        // image update 
+        J_cuda[y * width + x] = temp[j][i] + 0.25 * lambda * d_sum;
+      }
+    }
+    
 }

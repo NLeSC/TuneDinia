@@ -65,15 +65,15 @@ def tune_kernel_1():
   grid_div_x = ["block_size_x", "tile_size_x"]
   grid_div_y = ["block_size_y", "tile_size_y"]
   #run the original kernel for output verification
-  output_orig = run_kernel("srad_cuda_1","srad_orig_1.cu",problem_size,kernel_args,kernel_params_orig)
+  #output_orig = run_kernel("srad_cuda_1","srad_orig_1.cu",problem_size,kernel_args,kernel_params_orig)
   #setup metrics for the kernel
-  gflops = 29 * kernel_args[6] * kernel_args[7]
+  gflops = 28 * kernel_args[6] * kernel_args[7]
   srad_1_metrics = OrderedDict()
   srad_1_metrics["GFLOP/s"] = lambda x: (gflops/1e9)/(x['time']/1e3)
   #tune the kernel and verify the output
-  answer = [output_orig[0], output_orig[1], output_orig[2], output_orig[3], None, output_orig[5], None, None, None]
-  results, env = tune_kernel("srad_cuda_1","srad_1.cu",problem_size,kernel_args,tune_params,grid_div_x=grid_div_x,grid_div_y=grid_div_y,answer=answer, metrics=srad_1_metrics, verbose=True)
-  store_results("srad_1.json", "srad_cuda_1", "srad_1.cu", tune_params, problem_size, results, env, top=3, objective="GFLOP/s")
+  #answer = [output_orig[0], output_orig[1], output_orig[2], output_orig[3], None, output_orig[5], None, None, None]
+  results, env = tune_kernel("srad_cuda_1","srad_1_tiling.cu",problem_size,kernel_args,tune_params,grid_div_x=grid_div_x,grid_div_y=grid_div_y, metrics=srad_1_metrics, verbose=True)
+  store_results("srad_1.json", "srad_cuda_1", "srad_1_tiling.cu", tune_params, problem_size, results, env, top=3, objective="GFLOP/s")
   create_device_targets("srad_1.h","srad_1.json",objective="GFLOP/s")
 
 
@@ -93,20 +93,20 @@ def tune_kernel_2():
   grid_div_x = ["block_size_x", "tile_size_x"]
   grid_div_y = ["block_size_y", "tile_size_y"]
   #run the original kernel for output verification
-  output_orig = run_kernel("srad_cuda_2","srad_orig_2.cu",problem_size,kernel_args,kernel_params_orig)
+  #output_orig = run_kernel("srad_cuda_2","srad_orig_2.cu",problem_size,kernel_args,kernel_params_orig)
   #setup metrics for the kernel
   gflops = 10 * kernel_args[6] * kernel_args[7]
   srad_1_metrics = OrderedDict()
   srad_1_metrics["GFLOP/s"] = lambda x: (gflops/1e9)/(x['time']/1e3)
   #tune the kernel and verify the output
-  answer = [None, None, None, None, output_orig[4], None, None, None, None, None]
-  results, env = tune_kernel("srad_cuda_2","srad_2.cu",problem_size,kernel_args,tune_params,grid_div_x=grid_div_x,grid_div_y=grid_div_y,metrics=srad_1_metrics,answer=answer)
-  store_results("srad_2.json", "srad_cuda_2", "srad_2.cu", tune_params, problem_size, results, env, top=3, objective="GFLOP/s")
+  #answer = [None, None, None, None, output_orig[4], None, None, None, None, None]
+  results, env = tune_kernel("srad_cuda_2","srad_2_tiling.cu",problem_size,kernel_args,tune_params,grid_div_x=grid_div_x,grid_div_y=grid_div_y,metrics=srad_1_metrics)
+  store_results("srad_2.json", "srad_cuda_2", "srad_2_tiling.cu", tune_params, problem_size, results, env, top=3, objective="GFLOP/s")
   create_device_targets("srad_2.h","srad_2.json",objective="GFLOP/s")
 
 if __name__ == "__main__":
   print("----------- TUNING SRAD 1 KERNEL -------------------")
-  #tune_kernel_1()
+  tune_kernel_1()
   print("----------------------------------------------------")
   print("----------- TUNING SRAD 2 KERNEL -------------------")
   tune_kernel_2()
