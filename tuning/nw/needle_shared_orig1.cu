@@ -1,12 +1,18 @@
-__device__ __host__ int 
 maximum( int a,
 		 int b,
 		 int c){
 
 int k;
-  k = (a < b) ? b : a;
-  k = (k < c) ? c : k;
-  return k;
+if( a <= b )
+k = b;
+else 
+k = a;
+
+if( k <=c )
+return(c);
+else
+return(k);
+
 }
 
 __global__ void
@@ -62,7 +68,7 @@ needle_cuda_shared_1(  int* referrence,
 	  __syncthreads();
   
     }
- #pragma unroll
+ 
  for( int m = BLOCK_SIZE - 2 ; m >=0 ; m--){
    
 	  if ( tx <= m){

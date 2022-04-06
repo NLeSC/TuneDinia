@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 from collections import OrderedDict
 from kernel_tuner import tune_kernel, run_kernel
 from kernel_tuner.integration import store_results, create_device_targets
@@ -54,8 +55,8 @@ def get_tunable_parameters():
     return tune_params
 
 
-def get_input_data():
-    rows = cols = np.int32(2049)
+def get_input_data(size):
+    rows = cols = np.int32(size)
     problem_size = cols - 1
     array_size = rows * cols
     reference = np.random.randint(low=-10,high=0,size=array_size,dtype=np.int32)
@@ -63,8 +64,8 @@ def get_input_data():
     penalty = np.int32(10)
     return cols, problem_size, reference, input_itemsets, penalty
 
-def tune():
-    cols, problem_size, reference, input_itemsets, penalty = get_input_data()
+def tune(size):
+    cols, problem_size, reference, input_itemsets, penalty = get_input_data(size)
 
     args = [reference,input_itemsets,cols,penalty]
     
@@ -81,4 +82,8 @@ def tune():
     create_device_targets("needle_cuda_shared_2.h", "needle_cuda_shared_2.json")
 
 if __name__ == "__main__":
-    tune()
+    if len(sys.argv) > 1:
+        size = int(sys.argv[1])
+    else:
+        size = 2049
+    tune(size)

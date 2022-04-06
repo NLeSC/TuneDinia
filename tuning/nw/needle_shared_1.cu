@@ -1,5 +1,3 @@
-#include "needle_shared_1.h"
-
 __device__ __host__ int 
 maximum( int a,
 		 int b,
@@ -43,7 +41,7 @@ needle_cuda_shared_1(  int* referrence,
   temp[0][tx + 1] = matrix_cuda[index_n];
   
   __syncthreads();
-  
+  #pragma unroll
   for( int m = 0 ; m < block_size_x ; m++){
    
 	  if ( tx <= m ){
@@ -60,7 +58,7 @@ needle_cuda_shared_1(  int* referrence,
 	   __syncthreads();
   
   }
-
+ #pragma unroll
  for( int m = block_size_x - 2 ; m >=0 ; m--){
    
 	  if ( tx <= m){
@@ -76,7 +74,7 @@ needle_cuda_shared_1(  int* referrence,
 
 	  __syncthreads();
   }
-
+  #pragma unroll
   for ( int ty = 0 ; ty < block_size_x ; ty++)
     matrix_cuda[index + ty * cols] = temp[ty+1][tx+1];
 

@@ -1,2 +1,0 @@
-srun --gres=gpu:1 python ./computecost_tune.py
-

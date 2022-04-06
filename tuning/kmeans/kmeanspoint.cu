@@ -9,7 +9,13 @@
 #endif
 
 #ifndef NFEATURES
-#define NFEATURES 35
+	#define NFEATURES 35
+#endif
+#ifndef NPOINTS
+	#define NPOINTS 1000
+#endif
+#ifndef NCLUSTERS
+	#define NCLUSTERS 6
 #endif
 
 #define GPU_DELTA_REDUCTION
@@ -23,9 +29,6 @@
 extern "C"
 __global__ void
 kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
-            int     nfeatures,
-            int     npoints,
-            int     nclusters,
             int    *membership,
 			float  *clusters, int* block_deltas,
 			float* block_clusters,
@@ -39,7 +42,7 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 	const unsigned int point_id = point_offset + threadIdx.x;
 	int  index = -1;
 
-	if (point_id < npoints)
+	if (point_id < NPOINTS)
 	{
 		int i, j;
 		float min_dist = 1e10;
@@ -47,13 +50,13 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 		
 		/* find the cluster center id with min distance to pt */
 		#pragma unroll
-		for (i=0; i<NCLUSTERS; i++) {
-			int cluster_base_index = i*nfeatures;					/* base index of cluster centers for inverted array */			
+		for (i=0; i< NCLUSTERS; i++) {
+			int cluster_base_index = i*NFEATURES;					/* base index of cluster centers for inverted array */			
 			float ans=0.0;												/* Euclidean distance sqaure */
 			#pragma unroll
 			for (j=0; j < NFEATURES; j++)
 			{					
-				int addr = point_id + j*npoints;					/* appropriate index of data point */
+				int addr = point_id + j*NPOINTS;					/* appropriate index of data point */
 				float diff = LDG(features,addr) -  //t_features[addr]
 							  clusters[cluster_base_index + j];	/* distance between a data point to cluster centers */
 				ans += diff*diff;									/* sum of squares */
@@ -77,7 +80,7 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 		deltas[threadIdx.x] = 0;
 	}
 #endif
-	if (point_id < npoints)
+	if (point_id < NPOINTS)
 	{
 #ifdef GPU_DELTA_REDUCTION
 		/* if membership changes, increase delta by 1 */
@@ -128,16 +131,16 @@ kmeansPoint(float  *features,			/* in: [npoints*nfeatures] */
 	#pragma unroll
 	for(int j = threadIdx.x; j < (NFEATURES*NCLUSTERS); j += THREADS_PER_BLOCK){
 		accumulator = 0.f;
-		int cluster = j / nfeatures;    //0..clusters-1
-		int feature = j % nfeatures;	//0..nfeatures
-		int new_base_index = point_offset*nfeatures + feature;
+		int cluster = j / NFEATURES;    //0..clusters-1
+		int feature = j % NFEATURES;	//0..nfeatures
+		int new_base_index = point_offset*NFEATURES + feature;
 		// accumulate over all the elements of this threadblock 
 		#pragma unroll
 		for(int i = 0; i < THREADS_PER_BLOCK; i++) {
 			if(new_center_ids[i] == cluster) 
-				accumulator += feature_flipped_d[new_base_index+i*nfeatures];
+				accumulator += feature_flipped_d[new_base_index+i*NFEATURES];
 		}
-		block_clusters[(blockIdx.y*gridDim.x + blockIdx.x) * nclusters * nfeatures + j] = accumulator;
+		block_clusters[(blockIdx.y*gridDim.x + blockIdx.x) * NCLUSTERS * NFEATURES + j] = accumulator;
 	}
 #endif
 

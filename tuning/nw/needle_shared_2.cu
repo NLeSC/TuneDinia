@@ -1,5 +1,3 @@
-#include "needle_cuda_shared_2.h" 
-
 __device__ __host__ int 
 maximum( int a,
 		 int b,

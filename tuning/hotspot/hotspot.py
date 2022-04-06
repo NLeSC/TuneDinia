@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from collections import OrderedDict
 import numpy as np
-
+import sys
 import kernel_tuner as kt
 from kernel_tuner.integration import store_results, create_device_targets
 
@@ -128,9 +128,9 @@ def get_input_data(problem_size, max_tfactor):
 
 
 
-def tune():
+def tune(size):
 
-    problem_size = (4096, 4096)
+    problem_size = (size, size)
 
     tune_params, max_tfactor = get_tunable_parameters(problem_size)
 
@@ -167,5 +167,9 @@ def tune():
 
 
 if __name__ == "__main__":
-    tune()
+    if len(sys.argv) > 1:
+        size = int(sys.argv[1])
+    else:
+        size = int(2048)
+    tune(size)
     #test_temporal_tiling()

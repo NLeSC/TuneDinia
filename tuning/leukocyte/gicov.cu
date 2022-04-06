@@ -12,10 +12,6 @@
 	#define GRAD_M 219 
 #endif
 
-#ifndef USE_TEXTURE 
-	#define USE_TEXTURE 0
-#endif
-
 #ifndef USE_CONSTANT 
 	#define USE_CONSTANT 0
 #endif
@@ -24,11 +20,6 @@ __constant__ int c_tX[NCIRCLES * NPOINTS];
 __constant__ int c_tY[NCIRCLES * NPOINTS];
 __constant__ float c_sin_angle[NPOINTS];
 __constant__ float c_cos_angle[NPOINTS];
-// #ifndef inner_loop
-// 	#define inner_loop 0
-// #endif
-
-//texture<float, 1, cudaReadModeElementType> tex;
 
 // Kernel to find the maximal GICOV value at each pixel of a
 //  video frame, based on the input x- and y-gradient matrices
@@ -69,11 +60,6 @@ __global__ void GICOV_kernel(float *gicov, float* device_grad_x, float* device_g
 				float p = device_grad_x[addr] * cos_angle[n] + 
 							device_grad_y[addr] * sin_angle[n];
 			#endif
-			
-			// #if USE_TEXTURE == 1
-			// 	float p = tex1D(tex,addr) * cos_angle[n] + 
-			// 				device_grad_y[addr] * sin_angle[n];
-			// #endif
 			
 			// Update the running total
 			sum += p;

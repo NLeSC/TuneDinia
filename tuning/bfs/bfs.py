@@ -4,6 +4,7 @@ from kernel_tuner.integration import store_results, create_device_targets
 from kernel_tuner.kernelbuilder import PythonKernel
 from kernel_tuner.observers import BenchmarkObserver
 import os
+import sys
 from collections import OrderedDict
 
 from bfs_helper import read_graph, generate_graph
@@ -42,6 +43,11 @@ def tune(args):
     params = {"block_size_x" : 64, "threads_per_node": 1}
     problem_size = np.int32(args[7])
     first_kernel_args = args
+    #input/output lists for both kernels
+
+    #first_input_list = [True, True, True, True, False, True, False, True]
+    #first_output_list = [False, False, False, True, True, False, True, False]
+    #first_kernel = PythonKernel("Kernel", "kernel_warps.cu", problem_size, first_kernel_args, params, inputs=first_input_list, outputs=first_output_list)
 
     first_kernel_results = run_kernel("Kernel", "kernel_warps.cu", problem_size, first_kernel_args, params)
     g_graph_mask = first_kernel_results[3]
@@ -49,6 +55,10 @@ def tune(args):
     g_cost = first_kernel_results[6]
     print(f"{g_graph_mask=}")
     print(f"{type(g_graph_mask)=}")
+
+    #g_graph_mask, g_updating_graph_mask, g_cost = first_kernel(*first_kernel_args)
+
+    #tune the second iteration of the kernel, because hardly anything happens in the first
 
     #emulate kernel2
     g_graph_mask[g_updating_graph_mask] = True
@@ -93,5 +103,10 @@ def tune(args):
 if __name__ == "__main__":
     #args = create_args()
     #args = read_graph('graph4096.txt')
-    args = generate_graph(1e6, 5, 1e5)
+    if len(sys.argv) > 1:
+        num_nodes = int(sys.argv[1])
+    else:
+        num_nodes = int(1e5)
+    num_edges = int(num_nodes/10)
+    args = generate_graph(num_nodes, 5, num_edges)
     tune(args)

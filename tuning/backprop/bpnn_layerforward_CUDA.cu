@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include "math.h"
-#include "cuda.h"
-#define stop_loop 0
-#define WIDTH 16  // shared memory width  
-#define HEIGHT 16 // shared memory height
 #define HIDDEN 16
-
+#define stop_loop 0
 
 __global__ void
-bpnn_layerforward(float *input_cuda,
+bpnn_layerforward_CUDA_test(float *input_cuda,
              float *input_hidden_cuda,
              float *hidden_partial_sum,
              int in,
