@@ -86,7 +86,7 @@ def tune_GICOV(gradn, gradm):
   store_results("gicov.json", "GICOV_kernel" ,"gicov.cu", gicov_tuning_params, problem_size, results,env,top=3,objective="GFLOP/s")
   create_device_targets("gicov.h","gicov.json",objective="GFLOP/s")
 
-def tune_dilate():
+def tune_dilate(gradn, gradm):
   # setup args for dilate kernel
   kernel_args = create_args_dilate(gradn, gradm)
   dilate_kernel_args = [kernel_args[4],kernel_args[5],kernel_args[6]]

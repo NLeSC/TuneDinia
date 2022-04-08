@@ -43,8 +43,8 @@ def tune(args):
   compiler = cp.append(macro)
 
   results, env = tune_kernel("kernel_compute_cost","compute_cost.cu",computecost_size,computecost_args,computecost_tuning,compiler=compiler,metrics=computecost_metrics)
-  store_results("compute_cost.json","kernel_compute_cost","compute_cost.cu",computecost_tuning,computecost_size,results,env,top=3,objective="GFLOP/s")
-  create_device_targets("compute_cost.h","compute_cost.json",objective="GFLOP/s")
+  store_results("streamcluster.json","kernel_compute_cost","compute_cost.cu",computecost_tuning,computecost_size,results,env,top=3,objective="GFLOP/s")
+  create_device_targets("streamcluster.h","streamcluster.json",objective="GFLOP/s")
 
 if __name__ == "__main__":
   if len(sys.argv) > 1:

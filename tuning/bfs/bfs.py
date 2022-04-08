@@ -80,8 +80,6 @@ def tune(args):
 
     answer = [None, None, None, g_graph_mask_ref, g_updating_graph_mask_ref, None, g_cost_ref, None]
 
-    metrics = OrderedDict()
-    metrics["GFLOP/s"] = lambda x: (problem_size/1e9)/(x['time']/1e3)
     refresh_args = [None for _ in args2]
     refresh_args[3] = g_graph_mask
     refresh_args[4] = g_updating_graph_mask
@@ -93,7 +91,7 @@ def tune(args):
     grid_div_x = ["(block_size_x/threads_per_node)"]
 
     tune_results, env = tune_kernel("Kernel", "kernel_warps.cu", 
-        problem_size, args2, tune_params, metrics=metrics, compiler_options=cp, answer=answer, grid_div_x=grid_div_x, verbose=True, observers=[AccuracyObserver(refresh_args)])
+        problem_size, args2, tune_params, compiler_options=cp, answer=answer, grid_div_x=grid_div_x, verbose=True, observers=[AccuracyObserver(refresh_args)])
     
     store_results("bfs.json", "Kernel", "kernel_warps.cu", tune_params, problem_size, tune_results, env, top=3, objective="GFLOP/s")
 
@@ -101,8 +99,6 @@ def tune(args):
 
 
 if __name__ == "__main__":
-    #args = create_args()
-    #args = read_graph('graph4096.txt')
     if len(sys.argv) > 1:
         num_nodes = int(sys.argv[1])
     else:
